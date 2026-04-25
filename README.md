@@ -12,6 +12,31 @@ Para demostrar la eficacia de nuestros algoritmos, hemos construido un **Dashboa
 <img width="1914" height="866" alt="20260425-2051-44 3556047" src="https://github.com/user-attachments/assets/4cb992d2-3c83-4807-a430-41260c8a5917" />
 
 ### Arquitectura del motor (C++ Core)
+## Gestion del almacen (silo.hpp / silo.cpp)
+
+Define las estructuras de datos base como Position (Aisle, Side, X, Y, Z) y Box (ID, Destino, Reservas)
+
+## Control de Lanzaderas (dualCycleShuttle.cpp)
+
+Implementa el comportamiento lógico y físico de la clase Shuttle optimizando los movimientos para realizar las operaciones de entrada y salida de cajas en el mismo viaje con el objetivo de maximizar el rendimiento.
+
+## Orquestación de Salida y Métricas (paletManager.hpp / paletManager.cpp)
+
+Define las clases ActivePallet y PalletManager que actúan como el cerebro logístico que identifica cuándo hay suficiente stock (12 cajas) para iniciar la formación de un palé.
+
+También genera el informe final de rendimiento por consola y se encarga de la exportación a output.json.
+
+## Punto de entrada y simulación (main.cpp)
+
+Orquestrador principal del sistema.
+
+Funcionalidades:
+
+- CLI Parser: Procesa los argumentos de la terminal (Cajas, Seed, Arrival Rate, Skew, etc.) permitiendo el control total desde Streamlit.
+
+- Loop de Tiempo Real: Gestiona el reloj global de la simulación y la llegada de cajas según la Distribución Discreta de Zipf.
+
+- Inicialización: Carga los escenarios iniciales desde archivos CSV y configura el estado de los 32 shuttles antes de iniciar la ejecución.
 
 ## 🔬 Suite de Benchmarking y Hyperopt (Auto-Tuning)
 
