@@ -47,6 +47,7 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
         
         currentX = targetX;
         silo.storeBox(boxToStore); 
+        manager.registrarEvento(totalBusyTime, "IN", targetX, this->levelY, boxToStore.pos.z, boxToStore.fullID);
     }
 
     // ==========================================
@@ -62,6 +63,9 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
         //Extraemos y guardamos el destino
         std::string destination = outputBox->destination;
 
+        std::string cajaID = outputBox->fullID;
+        int pickZ = outputBox->pos.z;
+
         // Viajar hasta la caja a recoger + 10s de operación (Pick)
         int travelToPick = std::abs(pickX - currentX);
         totalBusyTime += 10.0 + travelToPick;
@@ -70,12 +74,15 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
         // Eliminamos físicamente la caja del almacén
         silo.removeBox(outputBox->pos);
 
+        // (Registramos el evento justo al recogerla)
+        manager.registrarEvento(totalBusyTime, "OUT", pickX, this->levelY, pickZ, cajaID);
+
         // Viajar a cabecera + 10s de operación (Drop en entrada)
         int travelToHead = std::abs(0 - currentX);
         totalBusyTime += 10.0 + travelToHead;
 
         currentX = 0;
-        
+
         /*std::cout << "[t=" << totalBusyTime << "s] Shuttle (Pasillo " << aisle << ", Y=" << levelY 
                   << ") extrajo caja de X=" << pickX << " para el palet " << destination << "\n";*/
 

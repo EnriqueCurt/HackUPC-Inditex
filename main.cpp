@@ -130,6 +130,9 @@ int main() {
         globalClock += 1.0; 
     }
 
+    // Generar el archivo JSON para el Frontend
+    manager.exportarJSON("output.json", globalClock);
+
     // 5. Informe Final
     std::cout << "\n--- SIMULACION FINALIZADA EN t=" << globalClock << "s ---\n";
     manager.printReport();

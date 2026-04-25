@@ -4,7 +4,22 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 #include "silo.hpp"
+
+// Añade esto justo antes de 'class PalletManager {'
+struct LogEvent {
+    double t;
+    std::string tipo; // "IN" o "OUT"
+    int x;
+    int y;
+    int z;
+    std::string caja;
+};
+
+
 
 struct ActivePallet {
     std::string destination;
@@ -33,6 +48,18 @@ public:
     void printReport() const;
 
     bool hasActivePallets() const {return !activePallets.empty();}
+
+    // Crear JSON 
+        std::vector<LogEvent> historialEventos;
+
+    // Función para que los shuttles registren lo que hacen
+    void registrarEvento(double t, std::string tipo, int x, int y, int z, std::string idCaja) {
+        historialEventos.push_back({t, tipo, x, y, z, idCaja});
+    }
+
+    // El generador del JSON
+    void exportarJSON(const std::string& filename, double tiempoTotalSimulacion) const;
+    
 };
 
 #endif
