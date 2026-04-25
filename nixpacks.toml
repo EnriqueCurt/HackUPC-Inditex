@@ -1,0 +1,15 @@
+[variables]
+PYTHONUNBUFFERED = "1"
+STREAMLIT_BROWSER_GATHER_USAGE_STATS = "false"
+
+[phases.setup]
+aptPkgs = ["build-essential", "g++"]
+
+[phases.install]
+cmds = ["pip install --no-cache-dir -r requirements.txt"]
+
+[phases.build]
+cmds = ["g++ main.cpp dualCycleShuttle.cpp paletManager.cpp silo.cpp -O2 -o simulador"]
+
+[start]
+cmd = "streamlit run app_streamlit.py --server.address 0.0.0.0 --server.port $PORT"
