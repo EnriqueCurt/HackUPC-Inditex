@@ -10,7 +10,7 @@ void PalletManager::updateActivePallets(Silo& silo, double currentTime) {
 
     // 1. Contar cajas disponibles (que no estén ya reservadas)
     for (Box* box : allBoxes) {
-        if (!box->isReserved) {
+        if (!box->isReserved && !box -> isIncoming) {
             inventoryCount[box->destination]++;
         }
     }
@@ -68,73 +68,114 @@ void PalletManager::notifyBoxArrival(std::string dest, double arrivalTime) {
     }
 }
 
-void PalletManager::printReport() const {
+void PalletManager::printReport(const Silo& silo, double totalSimTime) const {
     std::cout << "\n========================================================\n";
     std::cout << "          REPORTE FINAL DE RENDIMIENTO (INDITEX)          \n";
     std::cout << "========================================================\n";
     
+    int totalPalets = completedPallets.size();
+    std::vector<double> cycleTimes;
     double totalCycleTime = 0.0;
 
-    if (completedPallets.empty()) {
-        std::cout << "  No se completó ningún palet.\n";
-    } else {
-        for (const auto& p : completedPallets) {
-            double cycle = p.completionTime - p.startTime;
-            totalCycleTime += cycle;
-        }
-    }
-    
-    std::cout << "\n------------------- METRICAS CLAVE ---------------------\n";
-    
-    int totalPalets = completedPallets.size();
-    std::cout << "[1] TOTAL DE PALETS COMPLETADOS : " << totalPalets << " palets\n";
-    std::cout << "[2] TOTAL DE CAJAS EXTRAIDAS    : " << (totalPalets * 12) << " cajas\n";
-    
-    if (totalPalets > 0) {
-        double averageTime = totalCycleTime / totalPalets;
-        std::cout << "[3] THROUGHPUT (Tiempo Medio)   : " << averageTime << " s/palet\n";
+    for (const auto& p : completedPallets) {
+        double cycle = p.completionTime - p.startTime;
+        cycleTimes.push_back(cycle);
+        totalCycleTime += cycle;
     }
 
-    // Nuestro sistema tiene una regla estricta de no sacar palets a medias, 
-    // por lo tanto, la métrica de Full Pallets siempre es el 100% de lo extraído.
-    std::cout << "[4] FULL PALLETS PERCENTAGE     : 100 %\n";
+    // --- CÁLCULOS ESTADÍSTICOS ---
+    double averageTime = 0.0;
+    double medianTime = 0.0;
+    double palletsPerHour = 0.0;
+
+    if (totalPalets > 0) {
+        // Media
+        averageTime = totalCycleTime / totalPalets;
+
+        // Mediana
+        std::sort(cycleTimes.begin(), cycleTimes.end());
+        if (totalPalets % 2 == 0) {
+            medianTime = (cycleTimes[totalPalets / 2 - 1] + cycleTimes[totalPalets / 2]) / 2.0;
+        } else {
+            medianTime = cycleTimes[totalPalets / 2];
+        }
+
+        // Palets / Hora
+        if (totalSimTime > 0) {
+            palletsPerHour = (totalPalets / totalSimTime) * 3600.0;
+        }
+    }
+
+    // Cajas sobrantes en el Silo
+    int cajasEnSilo = silo.getAllBoxes().size();
+
+    std::cout << "\n------------------- METRICAS CLAVE ---------------------\n";
+    std::cout << "[1] TOTAL DE PALETS COMPLETADOS : " << totalPalets << " palets\n";
+    std::cout << "[2] TOTAL DE CAJAS EXTRAIDAS    : " << (totalPalets * 12) << " cajas\n";
+    std::cout << "[3] CAJAS RESTANTES EN SILO     : " << cajasEnSilo << " cajas\n";
+    std::cout << "[4] THROUGHPUT (Palets / Hora)  : " << palletsPerHour << " palets/h\n";
+    std::cout << "[5] TIEMPO MEDIO (Average)      : " << averageTime << " s/palet\n";
+    std::cout << "[6] MEDIANA DE TIEMPO (Median)  : " << medianTime << " s/palet\n";
+    std::cout << "[7] FULL PALLETS PERCENTAGE     : 100 %\n";
     std::cout << "========================================================\n";
 }
 
-#include <fstream>
-#include <iomanip>
+void PalletManager::exportarJSON(const std::string& filename, const Silo& silo, double tiempoTotalSimulacion) const {
 
-// Pon esto al final de paletManager.cpp
-void PalletManager::exportarJSON(const std::string& filename, double tiempoTotalSimulacion) const {
     std::ofstream out(filename);
+    
     if (!out.is_open()) {
         std::cerr << "Error al crear el archivo JSON.\n";
         return;
     }
 
-    // 1. Cálculos de métricas
+    // --- CÁLCULOS PREVIOS ---
     int paletsCompletados = completedPallets.size();
-    double throughput = 0.0;
-    if (tiempoTotalSimulacion > 0) {
-        // Palets por hora
-        throughput = (paletsCompletados / tiempoTotalSimulacion) * 3600.0; 
-    }
-    
-    // Un score inventado para el hackathon (ej: premia palets completados y penaliza tiempo)
-    int score = (paletsCompletados * 1000) - static_cast<int>(tiempoTotalSimulacion);
-    if (score < 0) score = 0;
+    std::vector<double> cycleTimes;
+    double totalCycleTime = 0.0;
 
-    // Empezamos a escribir el JSON
+    for (const auto& p : completedPallets) {
+        double cycle = p.completionTime - p.startTime;
+        cycleTimes.push_back(cycle);
+        totalCycleTime += cycle;
+    }
+
+    double averageTime = 0.0;
+    double medianTime = 0.0;
+    double throughput = 0.0;
+
+    if (paletsCompletados > 0) {
+        averageTime = totalCycleTime / paletsCompletados;
+
+        // Cálculo de Mediana
+        std::sort(cycleTimes.begin(), cycleTimes.end());
+        if (paletsCompletados % 2 == 0) {
+            medianTime = (cycleTimes[paletsCompletados / 2 - 1] + cycleTimes[paletsCompletados / 2]) / 2.0;
+        } else {
+            medianTime = cycleTimes[paletsCompletados / 2];
+        }
+
+        if (tiempoTotalSimulacion > 0) {
+            throughput = (paletsCompletados / tiempoTotalSimulacion) * 3600.0;
+        }
+    }
+
+    int cajasRestantes = silo.getAllBoxes().size();
+    int score = (paletsCompletados * 1000) + (cajasRestantes * -10); // Ejemplo de score: premia palets, penaliza stock parado
+
+    // --- GENERACIÓN DEL JSON ---
     out << std::fixed << std::setprecision(2);
     out << "{\n";
     
-    // --- METRICS ---
     out << "  \"metrics\": {\n"
         << "    \"t_simulacion_s\": " << tiempoTotalSimulacion << ",\n"
         << "    \"throughput_palets_hora\": " << throughput << ",\n"
         << "    \"palets_completados\": " << paletsCompletados << ",\n"
-        << "    \"tasa_completitud_%\": 100.0,\n" // Como no dejamos palets a medias, es 100%
-        << "    \"score\": " << score << "\n"
+        << "    \"tasa_completitud_%\": 100.0,\n"
+        << "    \"score\": " << score << ",\n"
+        << "    \"cajas_restantes_silo\": " << cajasRestantes << ",\n" // NUEVA
+        << "    \"tiempo_medio_s_palet\": " << averageTime << ",\n"    // NUEVA
+        << "    \"mediana_tiempo_s_palet\": " << medianTime << "\n"    // NUEVA
         << "  },\n";
 
     // --- PALLETS ---

@@ -46,7 +46,13 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
         totalBusyTime += 10.0 + targetX + 10.0; 
         
         currentX = targetX;
-        silo.storeBox(boxToStore); 
+
+        // Como ya hemos llegado, le quitamos la etiqueta de "En tránsito"
+        // para que el PalletManager ya sepa que puede usarla.
+        Box* cajaReal = silo.getBox(boxToStore.pos.aisle, boxToStore.pos.side, targetX, this->levelY, boxToStore.pos.z);
+        if (cajaReal != nullptr) {
+            cajaReal->isIncoming = false;
+        }
         manager.registrarEvento(totalBusyTime, "IN", targetX, this->levelY, boxToStore.pos.z, boxToStore.fullID);
     }
 

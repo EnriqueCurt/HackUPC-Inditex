@@ -31,6 +31,7 @@ struct Box {
     std::string destination;
     Position pos;
     bool isReserved = false;
+    bool isIncoming = false;
     // Constructor básico
     Box(std::string id, std::string dest) : fullID(id), destination(dest) {}
 };

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <cmath>
 #include <cstdlib>
+#include <string>
 #include "silo.hpp"
 #include "paletManager.hpp"
 
@@ -20,12 +21,7 @@ void cargarEstadoInicial(Silo& silo, const std::string& filename) {
 
     int contador = 0;
     while (std::getline(file, line)) {
-        // 1. ESCUDO: Limpiar caracteres 'fantasma' de Windows (\r)
-        if (!line.empty() && line.back() == '\r') {
-            line.pop_back();
-        }
-
-        // Si la línea está vacía tras limpiarla, la ignoramos
+        if (!line.empty() && line.back() == '\r') line.pop_back();
         if (line.empty()) continue;
 
         std::stringstream ss(line);
@@ -33,37 +29,59 @@ void cargarEstadoInicial(Silo& silo, const std::string& filename) {
         std::getline(ss, posStr, ',');
         std::getline(ss, idStr, ',');
 
-        // 2. ESCUDO: Validar que los datos leídos tienen la longitud mínima esperada
-        // El ID debe tener al menos 15 caracteres
-        // La posición debe tener 11 caracteres para el fromString
-        if(idStr.empty()){
-            continue;
-        }
-        if (idStr.length() < 15 || posStr.length() < 11) {
-            std::cerr << "Aviso: Linea ignorada por formato incorrecto -> " << line << "\n";
-            continue; 
-        }
-
-        // Ahora sí podemos extraer de forma 100% segura
-        std::string destino = idStr.substr(7, 8);
+        if(idStr.empty()) continue;
         
+        if (idStr.length() < 15 || posStr.length() < 11) continue; 
+
+        std::string destino = idStr.substr(7, 8);
         Box nuevaCaja(idStr, destino);
         nuevaCaja.pos = Position::fromString(posStr);
-        
         silo.storeBox(nuevaCaja);
         contador++;
     }
-    std::cout << "[INFO] Silo inicializado con " << contador << " cajas del CSV.\n";
+    std::cout << "[INFO] Silo inicializado con " << contador << " cajas del CSV: " << filename << "\n";
 }
 
 int main(int argc, char* argv[]) {
-    std::cout << "=== SIMULADOR LOGISTICO DE ALTO RENDIMIENTO ===\n\n";
+    // ==================================================================
+    // 1. VALORES POR DEFECTO (Se sobreescribirán con la interfaz)
+    // ==================================================================
+    int totalCajasNuevas = 1200;
+    int seed = 42;
+    double arrivalRate = 1000.0;
+    std::string initialCsv = "silo-semi-empty.csv";
+    bool usarABC = true;
 
-    // 1. Inicialización de componentes
+    // ==================================================================
+    // 2. PARSEADOR DE ARGUMENTOS (Conecta con los botones de Streamlit)
+    // ==================================================================
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--cajas" && i + 1 < argc) {
+            totalCajasNuevas = std::stoi(argv[++i]);
+        } else if (arg == "--seed" && i + 1 < argc) {
+            seed = std::stoi(argv[++i]);
+        } else if (arg == "--arrival-rate" && i + 1 < argc) {
+            arrivalRate = std::stod(argv[++i]);
+        } else if (arg == "--initial-csv" && i + 1 < argc) {
+            initialCsv = argv[++i];
+        } else if (arg == "--abc" && i + 1 < argc) {
+            std::string val = argv[++i];
+            usarABC = (val == "true" || val == "1");
+        }
+    }
+
+    // Aplicamos la semilla para que los resultados sean reproducibles en el "A/B Testing" de la interfaz
+    srand(seed);
+
+    std::cout << "=== SIMULADOR LOGISTICO C++ ===\n";
+    std::cout << "-> Cajas a procesar: " << totalCajasNuevas << "\n";
+    std::cout << "-> Arrival Rate: " << arrivalRate << " cajas/h\n";
+
     Silo miSilo;
     PalletManager manager;
     
-    // Matriz de 32 Shuttles: [Pasillo 0-3][Nivel 0-7]
+    // Generar Shuttles
     std::vector<std::vector<Shuttle>> shuttles;
     for (int a = 1; a <= 4; ++a) {
         std::vector<Shuttle> pasillo;
@@ -73,36 +91,32 @@ int main(int argc, char* argv[]) {
         shuttles.push_back(pasillo);
     }
 
-    // Entrenar al algoritmo con el historico
+    // Aplicar Configuración ABC
     miSilo.loadHistory("historico_pedidos.csv");
-    
-    // Leemos la terminal para ver si nos han pasado el argumento "--abc"
-    bool usarABC = false; 
-    if (argc > 1) {
-        std::string argumento = argv[1];
-        if (argumento == "--abc") {
-            usarABC = true;
-        }
-    }
-    
-    // Le pasamos la decisión al Silo
     miSilo.setABCStatus(usarABC);
 
-    // 2. Cargar el escenario inicial (el CSV que nos dieron)
-    cargarEstadoInicial(miSilo, "silo-semi-empty.csv");
+    // Cargar CSV Dinámico desde la interfaz
+    if (!initialCsv.empty()) {
+        cargarEstadoInicial(miSilo, initialCsv);
+    }
 
-    // 3. Variables de simulación
+    // ==================================================================
+    // 3. VARIABLES DE TIEMPO Y SIMULACIÓN
+    // ==================================================================
     double globalClock = 0.0;
-    const double tiempoMaximo = 8000.0; // Simulamos 1 hora
-    const double intervaloEntrada = 3.6; // 1000 cajas/hora ≈ 1 cada 3.6s
+    // Damos un tiempo máximo muy amplio. Se romperá el bucle cuando ya no haya trabajo.
+    const double tiempoMaximo = 20000.0; 
+    
+    // Calculamos el intervalo exacto (ej. 1000 cajas/h = 1 caja cada 3.6 seg)
+    double intervaloEntrada = 3600.0 / arrivalRate; 
+    double nextArrivalTime = 0.0; // Reloj específico para la llegada de cajas
     int cajasEntradasRealizadas = 0;
-    const int totalCajasNuevas = 1200; 
 
-    // Generador de cajas nuevas
+    // Generador de cajas nuevas (Bombo de lotería)
     std::vector<std::string> bomboDestinos;
     std::ifstream fileHist("historico_pedidos.csv");
     std::string lineaHist;
-    std::getline(fileHist, lineaHist); // Saltar cabecera
+    std::getline(fileHist, lineaHist);
     while (std::getline(fileHist, lineaHist)) {
         if (!lineaHist.empty() && lineaHist.back() == '\r') lineaHist.pop_back();
         if (!lineaHist.empty()) bomboDestinos.push_back(lineaHist);
@@ -110,28 +124,30 @@ int main(int argc, char* argv[]) {
 
     std::cout << "[INFO] Iniciando bucle de tiempo real...\n";
 
-    
-    // 4. Bucle principal de Simulación
-    // El bucle sigue mientras no pase la hora O queden palets activos
+    // ==================================================================
+    // 4. BUCLE PRINCIPAL DE SIMULACIÓN
+    // ==================================================================
     while (globalClock < tiempoMaximo) {
         
-        // EVENTO A: Llegada de caja nueva (Online Arrival)
-        if (std::fmod(globalClock, intervaloEntrada) < 1.0 && cajasEntradasRealizadas < totalCajasNuevas) {
-            // Generamos un ID y destino de prueba (simulando llegada real)
+        // EVENTO A: Llegada de cajas nuevas (Mejorado para soportar modo "Stress" de interfaz)
+        while (globalClock >= nextArrivalTime && cajasEntradasRealizadas < totalCajasNuevas) {
             std::string id = "NEW" + std::to_string(cajasEntradasRealizadas);
             std::string dest = bomboDestinos[rand() % bomboDestinos.size()];
             
             Box tempBox(id, dest);
-
-            // Buscamos el mejor hueco entre los 32 shuttles
             Position mejorSitio = miSilo.findBestSlot(tempBox, shuttles);
             
             if (mejorSitio.x != -1) {
                 tempBox.pos = mejorSitio;
-                // Encolamos la entrada en el shuttle correspondiente
+
+                // Ocupamos el hueco FÍSICAMENTE al instante para evitar overbooking
+                tempBox.isIncoming = true; // Le ponemos la etiqueta para que nadie la toque aún
+                miSilo.storeBox(tempBox);
+
                 shuttles[mejorSitio.aisle - 1][mejorSitio.y - 1].pendingInputs.push_back(tempBox);
                 cajasEntradasRealizadas++;
             }
+            nextArrivalTime += intervaloEntrada; // Programar la siguiente caja
         }
 
         // EVENTO B: El Manager intenta abrir palets cada 10 segundos
@@ -140,26 +156,40 @@ int main(int argc, char* argv[]) {
         }
 
         // EVENTO C: Actualizar los 32 Shuttles
+        bool shuttlesTrabajando = false;
         for (int a = 0; a < 4; ++a) {
             for (int y = 0; y < 8; ++y) {
-                // Si el shuttle ha terminado su tarea anterior (su reloj <= reloj global)
                 if (shuttles[a][y].totalBusyTime <= globalClock) {
-                    // Sincronizamos el tiempo del shuttle con el global antes de darle la siguiente tarea
                     shuttles[a][y].totalBusyTime = globalClock;
                     shuttles[a][y].executeNextCycle(miSilo, manager);
                 }
+                
+                // Si un shuttle tiene tareas pendientes O su tiempo futuro es mayor al reloj, está trabajando
+                if (shuttles[a][y].getQueueSize() > 0 || shuttles[a][y].totalBusyTime > globalClock) {
+                    shuttlesTrabajando = true;
+                }
             }
         }
-        // Avanzamos el reloj (puedes aumentar el paso para que la simulación vuele)
+
+        // EVENTO D: Condición de parada anticipada
+        // Si ya entraron todas las cajas, no hay palets activos, y ningún shuttle se está moviendo: ¡FIN!
+        if (cajasEntradasRealizadas >= totalCajasNuevas && 
+            !manager.hasActivePallets() && 
+            !shuttlesTrabajando) {
+            break; 
+        }
+
         globalClock += 1.0; 
     }
 
-    // Generar el archivo JSON para el Frontend
-    manager.exportarJSON("output.json", globalClock);
+    // Exportar el JSON que consume la UI
+    manager.exportarJSON("output.json", miSilo, globalClock);
 
-    // 5. Informe Final
+    // ==================================================================
+    // 5. INFORME FINAL
+    // ==================================================================
     std::cout << "\n--- SIMULACION FINALIZADA EN t=" << globalClock << "s ---\n";
-    manager.printReport();
+    manager.printReport(miSilo, globalClock);
 
     return 0;
 }

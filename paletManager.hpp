@@ -6,6 +6,7 @@
 #include <map>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <iomanip>
 #include "silo.hpp"
 
@@ -45,7 +46,7 @@ public:
     // Método para notificar que una caja ha llegado a X=0
     void notifyBoxArrival(std::string dest, double arrivalTime);
 
-    void printReport() const;
+    void printReport(const Silo&, double) const;
 
     bool hasActivePallets() const {return !activePallets.empty();}
 
@@ -58,8 +59,7 @@ public:
     }
 
     // El generador del JSON
-    void exportarJSON(const std::string& filename, double tiempoTotalSimulacion) const;
-    
+    void exportarJSON(const std::string& filename, const Silo& silo, double tiempoTotalSimulacion) const;
 };
 
 #endif
