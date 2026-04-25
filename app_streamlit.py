@@ -34,19 +34,19 @@ BASE_DIR = Path(__file__).resolve().parent
 
 def compilar_motor_cpp():
     """Compila los archivos C++ en un ejecutable."""
+    ejecutable = CURRENT_DIR / ("simulador.exe" if platform.system() == "Windows" else "simulador")
     comando = [
-        "g++", "main.cpp", "dualCycleShuttle.cpp", 
-        "paletManager.cpp", "silo.cpp", "-o", "simulador"
+    "g++", "main.cpp", "dualCycleShuttle.cpp",
+    "paletManager.cpp", "silo.cpp", "-O2", "-o", str(ejecutable)
     ]
     
-    with st.spinner('⚙️ Compilando el motor C++ (g++)...'):
+    with st.spinner("Compilando motor C++..."):
         try:
-            # Ejecutamos el comando de compilación
-            resultado = subprocess.run(comando, check=True, capture_output=True, text=True)
-            st.success("✅ ¡Código C++ compilado con éxito!")
+            subprocess.run(comando, check=True, capture_output=True, text=True, cwd=str(CURRENT_DIR))
+            st.success("Codigo C++ compilado con exito.")
             return True
         except subprocess.CalledProcessError as e:
-            st.error(f"❌ Error al compilar C++:\n{e.stderr}")
+            st.error(f"Error al compilar C++:\n{e.stderr}")
             return False
 
 # Obtener la ruta de la carpeta donde está este script de python
@@ -90,23 +90,6 @@ def interpolate_path(p0, p1, steps=8):
         )
         for t in range(steps+1)
     ]
-
-def run_cpp_simulation():
-    try:
-        result = subprocess.run(
-            ["./simulador.exe"],   # o "simulador.exe" en Windows
-            capture_output=True,
-            text=True,
-            cwd=BASE_DIR  # 🔥 importante: ruta correcta
-        )
-
-        if result.returncode != 0:
-            return None, f"Error C++:\n{result.stderr}"
-
-        return result.stdout, None
-
-    except Exception as e:
-        return None, str(e)
     
 
 def shuttle_path(start, end):
@@ -217,13 +200,47 @@ def _load_weights_from_file(path: Path) -> Tuple[Optional[Dict[str, float]], str
     return weights, "ok"
 
 
-def _render_metrics(title: str, result: Dict):
-    st.subheader(title)
+def _render_metrics(title: str, res: Dict):
+    st.subheader(f"📊 {title}")
+    
+    # Primera fila: Los "Big Numbers"
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("t_sim (h)", result["t_simulacion_s"] / 3600)
-    c2.metric("throughput palets/h", result["throughput_palets_hora"])
-    c3.metric("palets completos", result["palets_completados"])
-    c4.metric("completitud %", result["tasa_completitud_%"])
+    c1.metric("🏆 Score Total", f"{int(res.get('score', 0)):,}")
+    c2.metric("📦 Palets", f"{res.get('palets_completados', 0)} uds")
+    c3.metric("⏱️ Tiempo Sim", f"{res.get('t_simulacion_s', 0)} s")
+    c4.metric("📉 Cajas en Silo", f"{res.get('cajas_restantes_silo', 0)}")
+
+    st.markdown("---")
+    
+    # Segunda fila: Rendimiento y Estabilidad
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.write("**Productividad**")
+        st.metric("Throughput", f"{res.get('throughput_palets_hora', 0):.2f} pal/h")
+        st.progress(min(res.get('tasa_completitud_%', 0) / 100, 1.0), text="Completitud")
+
+    with col2:
+        st.write("**Tiempo por Palet**")
+        st.metric("Media", f"{res.get('tiempo_medio_s_palet', 0):.2f} s", delta_color="inverse")
+        st.metric("Mediana", f"{res.get('mediana_tiempo_s_palet', 0):.2f} s")
+
+    with col3:
+        st.write("**Estado del Sistema**")
+        
+        # Mostramos el porcentaje de completitud en grande
+        tasa = res.get('tasa_completitud_%', 0)
+        st.metric(label="Completitud", value=f"{tasa:.1f} %")
+
+        # Mostramos las cajas que se han quedado en el silo
+        cajas_restantes = res.get('cajas_restantes_silo', 0)
+        st.metric(label="Cajas en Silo (Final)", value=f"{cajas_restantes} uds")
+
+        # Mensaje de estado rápido
+        if tasa >= 100:
+            st.success("✅ Todo completado")
+        else:
+            st.warning(f"⚠️ {100 - tasa:.1f}% por procesar")
 
 def _render_event_animation(events: List[dict], section_title: str, key_prefix: str):
     st.markdown("<style>.main .block-container{max-width:100%; padding:1rem;}</style>", unsafe_allow_html=True)
@@ -348,6 +365,15 @@ def main():
 
     scenarios = _discover_scenarios()
     scenario_names = [p.name for p in scenarios]
+
+    if "sim_result" not in st.session_state:
+        st.session_state.sim_result = None
+    if "sim_events" not in st.session_state:
+        st.session_state.sim_events = None
+    if "sim_palets" not in st.session_state:
+        st.session_state.sim_palets = None
+    if "sim_config" not in st.session_state:
+        st.session_state.sim_config = None
 
     with st.sidebar:
         st.header("Configuración")
@@ -477,78 +503,50 @@ def main():
             gen_click = st.button("Generar escenarios")
 
         st.divider()
-        run_click = st.button("Ejecutar simulación", type="primary", use_container_width=True)
+        run_click = st.button("Ejecutar simulacion", type="primary", use_container_width=True)
+
         if run_click:
-            if not compilar_motor_cpp():
-                st.error("No se pudo compilar el motor C++. Revisa los errores anteriores.")
-                return
+            ejecutable = CURRENT_DIR / ("simulador.exe" if platform.system() == "Windows" else "simulador")
+            if not ejecutable.exists():
+                if not compilar_motor_cpp():
+                    st.error("No se pudo compilar el motor C++.")
+                    st.stop()
 
-    if gen_click:
-        if initial_csv is None or not initial_csv.exists():
-            st.error("Selecciona un CSV inicial válido para generar escenarios.")
-        else:
-            try:
-                targets = parse_fill_targets(target_raw)
-                created = build_scenario_variants(
-                    base_csv=str(initial_csv),
-                    targets=targets,
-                    seed=int(scenario_seed),
-                )
-                if created:
-                    st.success("Escenarios generados correctamente.")
-                    for fp in created:
-                        st.write(fp)
-                else:
-                    st.info("No se generaron escenarios nuevos (targets <= ocupación actual).")
-            except Exception as exc:
-                st.error(f"Error generando escenarios: {exc}")
+            params = {
+                "cajas": n_cajas,
+                "destinos": n_destinos,
+                "seed": seed,
+                "strategy": strategy,
+                "abc": abc_flag,
+                "arrival-rate": arrival_rate_h,
+                "dispatch-every": dispatch_every,
+                "initial-csv": str(initial_csv) if initial_csv else ""
+            }
 
-   # --- EJECUCIÓN EXCLUSIVA C++ ---
-    params = {
-        "cajas": n_cajas,
-        "destinos": n_destinos,
-        "seed": seed,
-        "strategy": strategy,
-        "abc": abc_flag,  
-        "arrival-rate": arrival_rate_h,
-        "dispatch-every": dispatch_every,
-        "initial-csv": str(initial_csv) if initial_csv else ""
-    }
+            primary_result, primary_events, primary_palets = ejecutar_motor_cpp(params)
 
-    # Llamamos a la función que creamos antes para C++
-    # IMPORTANTE: Esta función devuelve 3 valores (metrics, events, pallets)
-    primary_result, primary_events, primary_palets = ejecutar_motor_cpp(params)
+            if primary_result is None:
+                st.error("Error al obtener datos del motor C++.")
+                st.stop()
 
-    if primary_result is None:
-        st.error("Error al obtener datos del motor C++.")
-        return
+            st.session_state.sim_result = primary_result
+            st.session_state.sim_events = primary_events
+            st.session_state.sim_palets = primary_palets
+            st.session_state.sim_config = {
+                "strategy": "custom" if custom_weights else strategy,
+                "scenario": scenario_name,
+                "n_cajas": str(n_cajas),
+                "n_destinos": str(n_destinos),
+                "arrival_rate_h": f"{arrival_rate_h:.0f}",
+                "dispatch_every": str(dispatch_every),
+            }
 
-    # A partir de aquí, el código de renderizado es el mismo, 
-    # usando los datos que nos ha dado el C++
-    config_summary = params
+    if st.session_state.sim_result is None:
+        st.info("Configura parametros y pulsa 'Ejecutar simulacion'.")
+        st.stop()
 
-    config_summary = {
-        "strategy": "custom" if custom_weights else strategy,
-        "scenario": scenario_name,
-        "n_cajas": str(n_cajas),
-        "n_destinos": str(n_destinos),
-        "arrival_rate_h": f"{arrival_rate_h:.0f}",
-        "dispatch_every": str(dispatch_every),
-    }
-    _render_config_summary(config_summary)
-
-    with st.spinner("Ejecutando simulación..."):
-        st.write("🚀 Ejecutando simulador C++...")
-
-        output, error = run_cpp_simulation()
-
-        if error:
-            st.error(error)
-            return
-
-        st.success("Simulación ejecutada")
-
-        # st.text(output[:2000])  # muestra salida
+    if st.session_state.sim_config is not None:
+        _render_config_summary(st.session_state.sim_config)
 
    # --- RENDERIZADO ÚNICO (MOTOR C++) ---
     st.markdown("---")
@@ -560,19 +558,25 @@ def main():
 
     with tab_dash:
         # Esto llamará a la función de métricas pero solo con un resultado
-        _render_metrics("Resultados Motor C++", primary_result)
+        _render_metrics("Resultados Motor C++", st.session_state.sim_result)
         
         # Si quieres ver el score grande, podemos añadirlo aquí
-        if "score" in primary_result:
-            st.metric("🏆 SCORE TOTAL", primary_result["score"])
+        if "score" in st.session_state.sim_result:
+            st.metric("🏆 SCORE TOTAL", st.session_state.sim_result["score"])
+
+        # Comparativa visual rápida entre Media y Mediana
+        st.info(f"💡 **Análisis de estabilidad:** La diferencia entre la media ({st.session_state.sim_result['tiempo_medio_s_palet']:.1f}s) "
+                f"y la mediana ({st.session_state.sim_result['mediana_tiempo_s_palet']:.1f}s) indica la consistencia del algoritmo "
+                f"frente a picos de trabajo.")
+        
 
     with tab_shuttle:
         # Tu animación a pantalla completa
-        _render_event_animation(primary_events, "Simulación Real-Time", "cpp_single")
+        _render_event_animation(st.session_state.sim_events, "Simulación Real-Time", "cpp_single")
 
     with tab_palets:
-        if primary_palets:
-            st.dataframe(pd.DataFrame(primary_palets), use_container_width=True)
+        if st.session_state.sim_palets:
+            st.dataframe(pd.DataFrame(st.session_state.sim_palets), use_container_width=True)
         else:
             st.info("No hay datos de palets.")
 
