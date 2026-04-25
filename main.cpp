@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <cstdlib>
 #include "silo.hpp"
 #include "paletManager.hpp"
 
@@ -92,13 +93,24 @@ int main(int argc, char* argv[]) {
 
     // 3. Variables de simulación
     double globalClock = 0.0;
-    const double tiempoMaximo = 3600.0; // Simulamos 1 hora
+    const double tiempoMaximo = 8000.0; // Simulamos 1 hora
     const double intervaloEntrada = 3.6; // 1000 cajas/hora ≈ 1 cada 3.6s
     int cajasEntradasRealizadas = 0;
-    const int totalCajasNuevas = 1500; 
+    const int totalCajasNuevas = 1200; 
+
+    // Generador de cajas nuevas
+    std::vector<std::string> bomboDestinos;
+    std::ifstream fileHist("historico_pedidos.csv");
+    std::string lineaHist;
+    std::getline(fileHist, lineaHist); // Saltar cabecera
+    while (std::getline(fileHist, lineaHist)) {
+        if (!lineaHist.empty() && lineaHist.back() == '\r') lineaHist.pop_back();
+        if (!lineaHist.empty()) bomboDestinos.push_back(lineaHist);
+    }
 
     std::cout << "[INFO] Iniciando bucle de tiempo real...\n";
 
+    
     // 4. Bucle principal de Simulación
     // El bucle sigue mientras no pase la hora O queden palets activos
     while (globalClock < tiempoMaximo) {
@@ -107,10 +119,10 @@ int main(int argc, char* argv[]) {
         if (std::fmod(globalClock, intervaloEntrada) < 1.0 && cajasEntradasRealizadas < totalCajasNuevas) {
             // Generamos un ID y destino de prueba (simulando llegada real)
             std::string id = "NEW" + std::to_string(cajasEntradasRealizadas);
-            std::string dest = "01018310"; // Destino frecuente en el CSV
+            std::string dest = bomboDestinos[rand() % bomboDestinos.size()];
             
             Box tempBox(id, dest);
-            
+
             // Buscamos el mejor hueco entre los 32 shuttles
             Position mejorSitio = miSilo.findBestSlot(tempBox, shuttles);
             
