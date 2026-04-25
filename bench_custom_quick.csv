@@ -1,0 +1,5 @@
+scenario,mode,strategy,seed,cajas_iniciales,cajas_entrantes,cajas_almacenadas,cajas_recuperadas,cajas_rechazadas_full,reubicaciones,palets_completados,palets_posibles,tasa_completitud_%,t_simulacion_s,t_simulacion_h,throughput_palets_hora,t_promedio_palet_s,t_computo_s,score
+silo-semi-empty-fill-40.csv,online,custom,7,2839,180,180,3019,0,546,219,251,87.3,6634.0,1.843,118.84,3504.4,0.0355,3777.2
+silo-semi-empty-fill-70.csv,online,custom,7,5266,180,180,5446,0,1455,403,453,89.0,14140.6,3.928,102.6,7850.9,0.0658,11958.6
+silo-semi-empty-fill-90.csv,online,custom,7,6873,180,180,7053,0,1992,525,587,89.4,20222.0,5.617,93.46,11804.2,0.0904,18434.4
+silo-semi-empty.csv,online,custom,7,460,180,180,640,0,3,30,53,56.6,841.6,0.234,128.33,392.7,0.013,-2176.6

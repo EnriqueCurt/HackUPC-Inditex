@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "iterations": 8,
+    "optimizer_seed": 42,
+    "modes": [
+      "online"
+    ],
+    "seeds": [
+      7
+    ],
+    "scenarios": [
+      "silo-semi-empty-fill-40.csv",
+      "silo-semi-empty-fill-70.csv",
+      "silo-semi-empty-fill-90.csv",
+      "silo-semi-empty.csv"
+    ],
+    "objective": {
+      "alpha_throughput": 20.0,
+      "alpha_completitud": 8.0,
+      "alpha_reubic": 0.4,
+      "alpha_full": 10.0
+    },
+    "metrics": {
+      "score": 7998.4,
+      "avg_t_sim_s": 10459.55,
+      "avg_throughput": 110.8075,
+      "avg_completitud": 80.575,
+      "avg_reubicaciones": 999.0,
+      "avg_rechazadas_full": 0.0
+    }
+  },
+  "weights": {
+    "w_shuttle": 1.2,
+    "w_x": 0.8,
+    "w_depth": 0.3,
+    "w_lane_fill": 0.2,
+    "w_pop": 0.4,
+    "w_close_pallet": 3.2
+  }
+}

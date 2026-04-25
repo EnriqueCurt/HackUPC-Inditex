@@ -1,0 +1,17 @@
+scenario,mode,strategy,seed,cajas_iniciales,cajas_entrantes,cajas_almacenadas,cajas_recuperadas,cajas_rechazadas_full,reubicaciones,palets_completados,palets_posibles,tasa_completitud_%,t_simulacion_s,t_simulacion_h,throughput_palets_hora,t_promedio_palet_s,t_computo_s
+silo-semi-empty-fill-40.csv,online,balanced,7,2839,240,240,3079,0,569,222,256,86.7,7824.0,2.173,102.15,3628.5,0.0408
+silo-semi-empty-fill-40.csv,online,balanced,42,2839,240,240,3079,0,567,219,256,85.5,7632.0,2.12,103.3,3576.7,0.0409
+silo-semi-empty-fill-40.csv,online,throughput,7,2839,240,240,3079,0,567,222,256,86.7,7784.0,2.162,102.67,3622.3,0.0404
+silo-semi-empty-fill-40.csv,online,throughput,42,2839,240,240,3079,0,580,219,256,85.5,7700.0,2.139,102.39,3573.1,0.0401
+silo-semi-empty-fill-70.csv,online,balanced,7,5266,240,240,5506,0,1469,408,458,89.1,15657.8,4.349,93.81,8107.3,0.0715
+silo-semi-empty-fill-70.csv,online,balanced,42,5266,240,240,5506,0,1465,405,458,88.4,15637.8,4.344,93.24,8056.1,0.0725
+silo-semi-empty-fill-70.csv,online,throughput,7,5266,240,240,5506,0,1479,406,458,88.6,15533.8,4.315,94.09,8118.4,0.0709
+silo-semi-empty-fill-70.csv,online,throughput,42,5266,240,240,5506,0,1486,404,458,88.2,15549.8,4.319,93.53,8090.7,0.07
+silo-semi-empty-fill-90.csv,online,balanced,7,6873,240,240,7113,0,1996,524,592,88.5,21344.8,5.929,88.38,12067.9,0.1036
+silo-semi-empty-fill-90.csv,online,balanced,42,6873,240,240,7113,0,1977,523,592,88.3,21304.8,5.918,88.37,12057.4,0.0946
+silo-semi-empty-fill-90.csv,online,throughput,7,6873,240,240,7113,0,1998,527,592,89.0,21376.6,5.938,88.75,12112.6,0.085
+silo-semi-empty-fill-90.csv,online,throughput,42,6873,240,240,7113,0,1976,526,592,88.9,21367.8,5.936,88.62,12108.7,0.1007
+silo-semi-empty.csv,online,balanced,7,460,240,240,700,0,3,30,58,51.7,912.4,0.253,118.37,392.7,0.0165
+silo-semi-empty.csv,online,balanced,42,460,240,240,700,0,11,30,58,51.7,912.4,0.253,118.37,391.4,0.0161
+silo-semi-empty.csv,online,throughput,7,460,240,240,700,0,3,30,58,51.7,912.4,0.253,118.37,392.7,0.0163
+silo-semi-empty.csv,online,throughput,42,460,240,240,700,0,11,30,58,51.7,912.4,0.253,118.37,391.4,0.0164
