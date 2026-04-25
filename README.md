@@ -11,6 +11,7 @@ Para demostrar la eficacia de nuestros algoritmos, hemos construido un **Dashboa
 
 <img width="1914" height="866" alt="20260425-2051-44 3556047" src="https://github.com/user-attachments/assets/4cb992d2-3c83-4807-a430-41260c8a5917" />
 
+### Arquitectura del motor (C++ Core)
 
 ## 🔬 Suite de Benchmarking y Hyperopt (Auto-Tuning)
 

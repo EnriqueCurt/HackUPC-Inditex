@@ -30,7 +30,7 @@ from silo_hackathon import (
     parse_fill_targets,
 )
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 def compilar_motor_cpp():
     """Compila los archivos C++ en un ejecutable."""
@@ -54,14 +54,14 @@ CURRENT_DIR = Path(__file__).parent.absolute()
 
 def ejecutar_motor_cpp(parametros):
     # Ruta absoluta al ejecutable y al json
-    ejecutable = str(CURRENT_DIR / "simulador.exe") if platform.system() == "Windows" else str(CURRENT_DIR / "simulador")
-    json_path = CURRENT_DIR / "output.json"
+    ejecutable = str((CURRENT_DIR) / "simulador.exe") if platform.system() == "Windows" else str(CURRENT_DIR / "simulador")
+    json_path = BASE_DIR / "output" / "output.json"
     
     # Limpiamos el json antiguo si existe para no leer datos viejos
     if json_path.exists():
-        os.remove(json_path)
+        with open(json_path, "r", encoding="utf-8") as f:
 
-    comando = [ejecutable]
+            comando = [ejecutable]
     for k, v in parametros.items():
         if v != "": comando.extend([f"--{k}", str(v)])
             
@@ -119,8 +119,8 @@ def shuttle_path(start, end):
 
 
 def _discover_scenarios() -> List[Path]:
-    return sorted(BASE_DIR.glob("silo-semi-empty*.csv"))
-
+    data_dir = BASE_DIR / "data"
+    return sorted(data_dir.glob("silo-semi-empty*.csv"))
 
 def _inject_styles():
     st.markdown(
@@ -511,6 +511,9 @@ def main():
         "strategy": strategy,
         "abc": abc_flag,  
         "arrival-rate": arrival_rate_h,
+        "history-size": history_size,  
+        "history-destinos": history_destinos, 
+        "history-skew": history_skew,
         "dispatch-every": dispatch_every,
         "initial-csv": str(initial_csv) if initial_csv else ""
     }
