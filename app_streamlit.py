@@ -366,8 +366,12 @@ def main():
                 scenario_name = "(sin CSV detectado)"
                 initial_csv = None
                 st.warning("No se detectaron escenarios CSV en la carpeta del proyecto.")
+            # --- Nueva opción Modo ABC ---
+            st.markdown('<div class="section-title">Configuración Algoritmo</div>', unsafe_allow_html=True)
+            modo_abc = st.checkbox("Activar Clasificación ABC", value=False, help="Organiza el almacén priorizando productos de alta rotación.")
 
-
+            # Guardamos el valor en un string para pasárselo al C++
+            abc_flag = "true" if modo_abc else "false"
             profile = st.selectbox(
                 "Perfil de carga",
                 ["Personalizado", "Demo rápida", "Balanceado", "Stress"],
@@ -505,6 +509,7 @@ def main():
         "destinos": n_destinos,
         "seed": seed,
         "strategy": strategy,
+        "abc": abc_flag,  
         "arrival-rate": arrival_rate_h,
         "dispatch-every": dispatch_every,
         "initial-csv": str(initial_csv) if initial_csv else ""
