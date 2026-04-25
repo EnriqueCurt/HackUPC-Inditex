@@ -5,9 +5,6 @@
 #include <cmath>
 #include <limits>
 
-// NOTA: He borrado enum TaskType y struct Task porque era código 
-// antiguo de nuestras primeras pruebas y ya no lo usamos.
-
 // Método que ejecuta el siguiente movimiento lógico del Shuttle
 void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
     // 1. Verificamos si hay trabajo que hacer en la cola de entrada
@@ -62,7 +59,7 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
     if (outputBox != nullptr) {
         int pickX = outputBox->pos.x;
         
-        // ¡AQUÍ ESTÁ LA CORRECCIÓN! Extraemos y guardamos el destino
+        //Extraemos y guardamos el destino
         std::string destination = outputBox->destination;
 
         // Viajar hasta la caja a recoger + 10s de operación (Pick)
@@ -79,12 +76,11 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
 
         currentX = 0;
 
-        // Ahora sí podemos avisar al manager porque 'destination' existe
+        // Notificacion
         manager.notifyBoxArrival(destination, totalBusyTime);
         
     } else {
-        // Si hicimos una Entrada, estamos en X>0, pero no hay Salidas pendientes.
-        // Debemos volver vacíos a la cabecera para la siguiente caja.
+
         if (currentX != 0) {
             totalBusyTime += currentX; // Solo sumamos distancia, sin los 10s
             currentX = 0;
