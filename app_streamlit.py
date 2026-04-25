@@ -548,7 +548,7 @@ def main():
 
         st.success("Simulación ejecutada")
 
-        st.text(output[:2000])  # muestra salida
+        # st.text(output[:2000])  # muestra salida
 
    # --- RENDERIZADO ÚNICO (MOTOR C++) ---
     st.markdown("---")
