@@ -129,7 +129,7 @@ Box* Silo::findBestBoxToPick(int aisle, int currentX, int levelY) {
                 Box* candidateBox = grid[aisle][s][x][levelY][z]; 
                 
                 // Si hay caja Y además ha sido reservada por el PalletManager
-                if (candidateBox != nullptr && candidateBox->isReserved) {
+                if (candidateBox != nullptr && candidateBox->isReserved && !candidateBox->isIncoming) {
                     int distance = std::abs(x - currentX);
                     if (distance < minDistance) {
                         minDistance = distance;
