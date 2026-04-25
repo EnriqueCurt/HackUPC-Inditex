@@ -7,6 +7,8 @@
 #include <cmath>
 #include <limits>
 #include <iostream>
+#include <fstream>
+#include <map>
 
 // 1. Estructuras de Datos Base
 struct Position {
@@ -64,6 +66,11 @@ private:
     // Nuestro almacén 5D. Usamos dimensiones +1 para facilitar el mapeo
     Box* grid[5][3][61][9][3]; 
 
+    // Mapa para guardar la "temperatura" (rotación) de cada destino
+    std::map<std::string, double> demandFrequencies;
+
+    bool useABCAnalysis = true;
+
 public:
     Silo(); // Constructor para inicializar a nullptr
     
@@ -84,6 +91,12 @@ public:
     
     // Devuelve todas las cajas actuales para que el PalletManager pueda contarlas
     std::vector<Box*> getAllBoxes() const;
+
+    // Cargar el histórico 
+    void loadHistory(const std::string& filename);
+
+    // Modificadora para usar Almacenamiento basado en rotacion 
+    void setABCStatus(bool status);
 };
 
 #endif // SILO_HPP

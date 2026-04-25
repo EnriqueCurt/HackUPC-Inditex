@@ -72,6 +72,9 @@ int main() {
         shuttles.push_back(pasillo);
     }
 
+    // Entrenar al algoritmo con el historico
+    miSilo.loadHistory("historico_pedidos.csv");
+    
     // 2. Cargar el escenario inicial (el CSV que nos dieron)
     cargarEstadoInicial(miSilo, "silo-semi-empty.csv");
 

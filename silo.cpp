@@ -5,6 +5,7 @@ const double W_X = 1.0; // Peso que penaliza a cuanta distancia la ponemos
 const double W_Q = 50.0; // Penalizamos mucho la saturación del shuttle
 const double W_A = 5.0; // Damos un gran bonus por juntar destinos
 const double W_Z = 0.5; // A cuanta altura o ponemos
+const double W_F = 15; // Peso de penalización por alta rotación
 
 // Constructor del Silo
 Silo::Silo() {
@@ -14,6 +15,38 @@ Silo::Silo() {
                 for(int y=0; y<9; ++y)
                     for(int z=0; z<3; ++z)
                         grid[a][s][x][y][z] = nullptr;
+}
+
+
+void Silo::loadHistory(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "[AVISO] No se encontró el historico: " << filename << "\n";
+        return;
+    }
+
+    std::string dest;
+    double maxFreq = 0.0;
+    std::map<std::string, double> rawCounts;
+    
+    // Saltamos cabecera
+    std::getline(file, dest); 
+    
+    // Contamos apariciones
+    while (std::getline(file, dest)) {
+        if (!dest.empty() && dest.back() == '\r') dest.pop_back();
+        if (dest.empty()) continue;
+        
+        rawCounts[dest]++;
+        if (rawCounts[dest] > maxFreq) maxFreq = rawCounts[dest];
+    }
+    
+    // Normalizamos la frecuencia de 0.0 (raro) a 1.0 (súper popular)
+    for (const auto& pair : rawCounts) {
+        demandFrequencies[pair.first] = pair.second / maxFreq;
+    }
+    //std::cout << "[INFO] Inteligencia ABC: Historico cargado con " 
+              //<< demandFrequencies.size() << " destinos mapeados.\n";
 }
 
 // Implementación del método de búsqueda
@@ -52,12 +85,25 @@ Position Silo::findBestSlot(const Box& newBox, const std::vector<std::vector<Shu
                             affinityBonus += 1.0;
                         }
 
+                        // Calcular si es un destino de alta rotacion
+                        double itemDemand = 0.0;
+                        if (useABCAnalysis && demandFrequencies.count(newBox.destination)) {
+                            itemDemand = demandFrequencies[newBox.destination];
+                        }
+
                         // LA ECUACIÓN MAESTRA
                         // W_X penaliza alejar la caja.
                         // W_Q penaliza darle la caja a un shuttle que ya tiene mucho trabajo.
                         // W_A premia ponerla cerca de cajas que van al mismo sitio.
                         // W_Z penaliza ponerla en el fondo (Z=2) si Z=1 está libre.
-                        double cost = (W_X * x) + (W_Q * shuttleQueueSize) - (W_A * affinityBonus) + (W_Z * z);
+                        // W_F Si la demanda es alta, cada paso en X cuesta muchísimo más.
+                        // Esto obliga a las cajas A (Top Ventas) a pelearse por las primeras posiciones X.
+                        double cost = 
+                                    (W_X * x) 
+                                    + (W_Q * shuttleQueueSize) 
+                                    - (W_A * affinityBonus) 
+                                    + (W_Z * z) 
+                                    + (W_F * itemDemand * x);
 
                         if (cost < minCost) {
                             minCost = cost;
@@ -165,4 +211,13 @@ std::vector<Box*> Silo::getAllBoxes() const {
         }
     }
     return allBoxes;
+}
+
+void Silo::setABCStatus(bool status) {
+    useABCAnalysis = status;
+    if (status) {
+        std::cout << "[SISTEMA] Algoritmo Predictivo ABC: ACTIVADO\n";
+    } else {
+        std::cout << "[SISTEMA] Algoritmo Predictivo ABC: DESACTIVADO (Modo Estándar)\n";
+    }
 }

@@ -40,8 +40,8 @@ void PalletManager::updateActivePallets(Silo& silo, double currentTime) {
                 }
             }
             
-            std::cout << "Manager: Nuevo palet reservado para [" << selectedDestination 
-                      << "] en t=" << currentTime << "s\n";
+            /*std::cout << "Manager: Nuevo palet reservado para [" << selectedDestination 
+                      << "] en t=" << currentTime << "s\n";*/
         }
     }
 }
@@ -58,8 +58,8 @@ void PalletManager::notifyBoxArrival(std::string dest, double arrivalTime) {
             }
 
             if (it->currentBoxes >= it->targetBoxes) {
-                std::cout << "¡PALET COMPLETADO! Destino: " << dest 
-                          << " | Tiempo total: " << (it->completionTime - it->startTime) << "s\n";
+                /*std::cout << "¡PALET COMPLETADO! Destino: " << dest 
+                          << " | Tiempo total: " << (it->completionTime - it->startTime) << "s\n";*/
                 completedPallets.push_back(*it);
                 activePallets.erase(it);
                 break;

@@ -75,8 +75,9 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
         totalBusyTime += 10.0 + travelToHead;
 
         currentX = 0;
-        std::cout << "[t=" << totalBusyTime << "s] Shuttle (Pasillo " << aisle << ", Y=" << levelY 
-                  << ") extrajo caja de X=" << pickX << " para el palet " << destination << "\n";
+        
+        /*std::cout << "[t=" << totalBusyTime << "s] Shuttle (Pasillo " << aisle << ", Y=" << levelY 
+                  << ") extrajo caja de X=" << pickX << " para el palet " << destination << "\n";*/
 
 
         // Notificacion
