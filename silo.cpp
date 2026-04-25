@@ -218,6 +218,6 @@ void Silo::setABCStatus(bool status) {
     if (status) {
         std::cout << "[SISTEMA] Algoritmo Predictivo ABC: ACTIVADO\n";
     } else {
-        std::cout << "[SISTEMA] Algoritmo Predictivo ABC: DESACTIVADO (Modo Estándar)\n";
+        std::cout << "[SISTEMA] Algoritmo Predictivo ABC: DESACTIVADO (Modo Estandar)\n";
     }
 }

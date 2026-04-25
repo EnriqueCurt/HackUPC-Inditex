@@ -55,7 +55,7 @@ void cargarEstadoInicial(Silo& silo, const std::string& filename) {
     std::cout << "[INFO] Silo inicializado con " << contador << " cajas del CSV.\n";
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     std::cout << "=== SIMULADOR LOGISTICO DE ALTO RENDIMIENTO ===\n\n";
 
     // 1. Inicialización de componentes
@@ -75,6 +75,18 @@ int main() {
     // Entrenar al algoritmo con el historico
     miSilo.loadHistory("historico_pedidos.csv");
     
+    // Leemos la terminal para ver si nos han pasado el argumento "--abc"
+    bool usarABC = false; 
+    if (argc > 1) {
+        std::string argumento = argv[1];
+        if (argumento == "--abc") {
+            usarABC = true;
+        }
+    }
+    
+    // Le pasamos la decisión al Silo
+    miSilo.setABCStatus(usarABC);
+
     // 2. Cargar el escenario inicial (el CSV que nos dieron)
     cargarEstadoInicial(miSilo, "silo-semi-empty.csv");
 
