@@ -12,7 +12,7 @@
 struct Position {
     int aisle, side, x, y, z;
 
-    // Lee el formato sin guiones: "01010010101"
+    // Lee el formato sin guiones
     static Position fromString(const std::string& code) {
         return {
             std::stoi(code.substr(0, 2)),   // Aisle (01)

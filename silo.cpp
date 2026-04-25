@@ -75,20 +75,20 @@ Box* Silo::findBestBoxToPick(int aisle, int currentX, int levelY) {
     Box* bestBox = nullptr;
     int minDistance = 9999;
 
-    // Asumimos pasillo 1 y lado 1 para simplificar, como antes
-    int a = aisle; 
-    int s = 1;
+    // Iteramos por los DOS LADOS (1 y 2)
+    for (int s = 1; s <= 2; ++s) {
 
-    for (int x = 1; x <= 60; ++x) {
-        for (int z = 1; z <= 2; ++z) {
-            Box* candidateBox = grid[a][s][x][levelY][z]; 
-            
-            // Si hay caja Y además ha sido reservada por el PalletManager
-            if (candidateBox != nullptr && candidateBox->isReserved) {
-                int distance = std::abs(x - currentX);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    bestBox = candidateBox;
+        for (int x = 1; x <= 60; ++x) {
+            for (int z = 1; z <= 2; ++z) {
+                Box* candidateBox = grid[aisle][s][x][levelY][z]; 
+                
+                // Si hay caja Y además ha sido reservada por el PalletManager
+                if (candidateBox != nullptr && candidateBox->isReserved) {
+                    int distance = std::abs(x - currentX);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        bestBox = candidateBox;
+                    }
                 }
             }
         }
@@ -146,7 +146,7 @@ void Silo::removeBox(const Position& pos) {
 }
 
 
-// Implementación de getAllBoxes (Para el PalletManager)
+// Implementación de getAllBoxes 
 
 std::vector<Box*> Silo::getAllBoxes() const {
     std::vector<Box*> allBoxes;

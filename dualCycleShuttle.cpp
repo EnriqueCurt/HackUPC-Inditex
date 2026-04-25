@@ -10,7 +10,7 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
     // 1. Verificamos si hay trabajo que hacer en la cola de entrada
     bool hasPendingInputs = !pendingInputs.empty();
     
-    // Buscamos si el Silo tiene alguna caja reservada para salir en ESTE pasillo y ESTE nivel Y
+    // Buscamos si el Silo tiene alguna caja reservada para salir en este pasillo y este nivel Y
     Box* outputBox = silo.findBestBoxToPick(this->aisle, this->currentX, this->levelY);
     bool hasPendingOutputs = (outputBox != nullptr);
 
@@ -21,7 +21,7 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
             // Viaje vacío: t = d (sin operación de carga/descarga)
             totalBusyTime += std::abs(currentX - 0); 
             currentX = 0;
-            // std::cout << "Shuttle (Pasillo " << aisle << ", Y=" << levelY << ") retorna vacio a cabecera.\n";
+            
         }
         return;
     }
@@ -75,6 +75,9 @@ void Shuttle::executeNextCycle(Silo& silo, PalletManager& manager) {
         totalBusyTime += 10.0 + travelToHead;
 
         currentX = 0;
+        std::cout << "[t=" << totalBusyTime << "s] Shuttle (Pasillo " << aisle << ", Y=" << levelY 
+                  << ") extrajo caja de X=" << pickX << " para el palet " << destination << "\n";
+
 
         // Notificacion
         manager.notifyBoxArrival(destination, totalBusyTime);

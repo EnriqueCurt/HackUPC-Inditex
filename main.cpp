@@ -19,13 +19,31 @@ void cargarEstadoInicial(Silo& silo, const std::string& filename) {
 
     int contador = 0;
     while (std::getline(file, line)) {
+        // 1. ESCUDO: Limpiar caracteres 'fantasma' de Windows (\r)
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+
+        // Si la línea está vacía tras limpiarla, la ignoramos
         if (line.empty()) continue;
+
         std::stringstream ss(line);
         std::string posStr, idStr;
         std::getline(ss, posStr, ',');
         std::getline(ss, idStr, ',');
 
-        // Extraemos destino (dígitos 8 al 15 del ID de 20 dígitos)
+        // 2. ESCUDO: Validar que los datos leídos tienen la longitud mínima esperada
+        // El ID debe tener al menos 15 caracteres
+        // La posición debe tener 11 caracteres para el fromString
+        if(idStr.empty()){
+            continue;
+        }
+        if (idStr.length() < 15 || posStr.length() < 11) {
+            std::cerr << "Aviso: Linea ignorada por formato incorrecto -> " << line << "\n";
+            continue; 
+        }
+
+        // Ahora sí podemos extraer de forma 100% segura
         std::string destino = idStr.substr(7, 8);
         
         Box nuevaCaja(idStr, destino);
@@ -62,7 +80,7 @@ int main() {
     const double tiempoMaximo = 3600.0; // Simulamos 1 hora
     const double intervaloEntrada = 3.6; // 1000 cajas/hora ≈ 1 cada 3.6s
     int cajasEntradasRealizadas = 0;
-    const int totalCajasNuevas = 200; // Por ejemplo, 200 cajas nuevas online
+    const int totalCajasNuevas = 1500; 
 
     std::cout << "[INFO] Iniciando bucle de tiempo real...\n";
 
