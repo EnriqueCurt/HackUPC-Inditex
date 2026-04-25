@@ -10,7 +10,7 @@ if __name__ == "__main__":
         "-m",
         "streamlit",
         "run",
-        "app_streamlit.py",
+        "frontend/app_streamlit.py",
         "--server.address",
         "0.0.0.0",
         "--server.port",

@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import json
+import platform
+import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import plotly.express as px
 import plotly.graph_objects as go
-
 import pandas as pd
-import numpy as np
 import streamlit as st
-import subprocess
-import json
-import time
-import pandas as pd
-import os
-import platform
-from pathlib import Path
 
-from silo_hackathon import (
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+SCRIPTS_DIR = BASE_DIR / "scripts"
+CPP_DIR = BASE_DIR / "cpp"
+OUTPUT_DIR = BASE_DIR / "output"
+OUTPUT_JSON = OUTPUT_DIR / "output.json"
+
+from scripts.silo_hackathon import (
     HEURISTIC_KEYS,
     PALET_SIZE,
     STRATEGY_PRESETS,
@@ -30,53 +32,59 @@ from silo_hackathon import (
     parse_fill_targets,
 )
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+
+def _motor_binary_path() -> Path:
+    return BASE_DIR / ("simulador.exe" if platform.system() == "Windows" else "simulador")
 
 def compilar_motor_cpp():
-    """Compila los archivos C++ en un ejecutable."""
+    """Compila los archivos C++ en un ejecutable estable en BASE_DIR."""
+    output_bin = _motor_binary_path()
     comando = [
-        "g++", "main.cpp", "dualCycleShuttle.cpp", 
-        "paletManager.cpp", "silo.cpp", "-o", "simulador"
+        "g++",
+        str(CPP_DIR / "main.cpp"),
+        str(CPP_DIR / "dualCycleShuttle.cpp"),
+        str(CPP_DIR / "paletManager.cpp"),
+        str(CPP_DIR / "silo.cpp"),
+        "-O2",
+        "-o",
+        str(output_bin),
     ]
-    
+
     with st.spinner('⚙️ Compilando el motor C++ (g++)...'):
         try:
-            # Ejecutamos el comando de compilación
-            resultado = subprocess.run(comando, check=True, capture_output=True, text=True)
+            subprocess.run(comando, check=True, capture_output=True, text=True, cwd=str(BASE_DIR))
             st.success("✅ ¡Código C++ compilado con éxito!")
             return True
         except subprocess.CalledProcessError as e:
             st.error(f"❌ Error al compilar C++:\n{e.stderr}")
             return False
 
-# Obtener la ruta de la carpeta donde está este script de python
-CURRENT_DIR = Path(__file__).parent.absolute()
-
 def ejecutar_motor_cpp(parametros):
-    # Ruta absoluta al ejecutable y al json
-    ejecutable = str((CURRENT_DIR) / "simulador.exe") if platform.system() == "Windows" else str(CURRENT_DIR / "simulador")
-    json_path = BASE_DIR / "output" / "output.json"
-    
-    # Limpiamos el json antiguo si existe para no leer datos viejos
-    if json_path.exists():
-        with open(json_path, "r", encoding="utf-8") as f:
+    ejecutable = _motor_binary_path()
+    comando = [str(ejecutable)]
 
-            comando = [ejecutable]
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    if OUTPUT_JSON.exists():
+        OUTPUT_JSON.unlink()
+
     for k, v in parametros.items():
-        if v != "": comando.extend([f"--{k}", str(v)])
-            
+        if v != "":
+            comando.extend([f"--{k}", str(v)])
+
     try:
-        # Ejecutamos especificando el directorio de trabajo (cwd)
-        subprocess.run(comando, check=True, cwd=str(CURRENT_DIR))
-        
-        if not json_path.exists():
-            st.error(f"No se encontró el archivo en: {json_path}")
+        subprocess.run(comando, check=True, cwd=str(BASE_DIR), capture_output=True, text=True)
+
+        if not OUTPUT_JSON.exists():
+            st.error(f"No se encontró el archivo en: {OUTPUT_JSON}")
             return None, None, None
 
-        with open(json_path, "r") as f:
+        with OUTPUT_JSON.open("r", encoding="utf-8") as f:
             data = json.load(f)
-            
-        return data["metrics"], data["events"], data["pallets"]
+
+        return data.get("metrics"), data.get("events", []), data.get("pallets", [])
+    except subprocess.CalledProcessError as e:
+        st.error(f"❌ Error ejecutando simulador:\n{e.stderr}")
+        return None, None, None
     except Exception as e:
         st.error(f"❌ Error leyendo output.json: {e}")
         return None, None, None
@@ -90,24 +98,6 @@ def interpolate_path(p0, p1, steps=8):
         )
         for t in range(steps+1)
     ]
-
-def run_cpp_simulation():
-    try:
-        result = subprocess.run(
-            ["./simulador.exe"],   # o "simulador.exe" en Windows
-            capture_output=True,
-            text=True,
-            cwd=BASE_DIR  # 🔥 importante: ruta correcta
-        )
-
-        if result.returncode != 0:
-            return None, f"Error C++:\n{result.stderr}"
-
-        return result.stdout, None
-
-    except Exception as e:
-        return None, str(e)
-    
 
 def shuttle_path(start, end):
     # Movimiento realista: primero eje X, luego ajuste Y/Z
@@ -361,7 +351,7 @@ def main():
                     index=0,
                     help="Estado inicial del silo antes de procesar cajas entrantes.",
                 )
-                initial_csv = BASE_DIR / scenario_name
+                initial_csv = BASE_DIR / "data" / scenario_name
             else:
                 scenario_name = "(sin CSV detectado)"
                 initial_csv = None
@@ -503,6 +493,10 @@ def main():
             except Exception as exc:
                 st.error(f"Error generando escenarios: {exc}")
 
+    if not run_click:
+        st.info("Configura parámetros y pulsa 'Ejecutar simulación' para lanzar el motor C++.")
+        return
+
    # --- EJECUCIÓN EXCLUSIVA C++ ---
     params = {
         "cajas": n_cajas,
@@ -539,19 +533,6 @@ def main():
         "dispatch_every": str(dispatch_every),
     }
     _render_config_summary(config_summary)
-
-    with st.spinner("Ejecutando simulación..."):
-        st.write("🚀 Ejecutando simulador C++...")
-
-        output, error = run_cpp_simulation()
-
-        if error:
-            st.error(error)
-            return
-
-        st.success("Simulación ejecutada")
-
-        # st.text(output[:2000])  # muestra salida
 
    # --- RENDERIZADO ÚNICO (MOTOR C++) ---
     st.markdown("---")

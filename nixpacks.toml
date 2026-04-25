@@ -9,7 +9,7 @@ aptPkgs = ["build-essential", "g++"]
 cmds = ["pip install --no-cache-dir -r requirements.txt"]
 
 [phases.build]
-cmds = ["g++ main.cpp dualCycleShuttle.cpp paletManager.cpp silo.cpp -O2 -o simulador"]
+cmds = ["g++ cpp/main.cpp cpp/dualCycleShuttle.cpp cpp/paletManager.cpp cpp/silo.cpp -O2 -o simulador"]
 
 [start]
-cmd = "streamlit run app_streamlit.py --server.address 0.0.0.0 --server.port $PORT"
+cmd = "streamlit run frontend/app_streamlit.py --server.address 0.0.0.0 --server.port $PORT"
