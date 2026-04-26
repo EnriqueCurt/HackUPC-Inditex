@@ -13,6 +13,4 @@ COPY . .
 RUN g++ cpp/main.cpp cpp/dualCycleShuttle.cpp cpp/paletManager.cpp cpp/silo.cpp -O2 -o simulador
 
 EXPOSE 8501
-
-# --- CAMBIO AQUÍ: Formato JSON ---
 CMD ["streamlit", "run", "frontend/app_streamlit.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
